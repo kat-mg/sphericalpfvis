@@ -35,7 +35,7 @@ const scene = new THREE.Scene();
 
 // Sphere Object
 const geometrySphere = new THREE.SphereGeometry(1, 32, 32);
-const materialSphere = new THREE.MeshBasicMaterial({ color: 0x0b5208, opacity: 0.3, wireframe: false });
+const materialSphere = new THREE.MeshBasicMaterial({ color: 0x0b5208, transparent: true, opacity: 0.3, wireframe: true });
 const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
 scene.add(meshSphere);
 
@@ -63,13 +63,28 @@ for (let i = 0; i < particleCount; i++) {
 particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
 
 const particleMaterial = new THREE.PointsMaterial();
-particleMaterial.size = 0.02;
+particleMaterial.size = 0.03;
 particleMaterial.sizeAttenuation = true;
 particleMaterial.wireframe = true;
 const particles = new THREE.Points(particleGeometry, particleMaterial);
 scene.add(particles);
 
-// Lines
+// Lines TODO
+const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(meshData.vertices[0][0], meshData.vertices[0][1], meshData.vertices[0][2]),
+    new THREE.Vector3(meshData.vertices[1][0], meshData.vertices[1][1], meshData.vertices[1][2]),
+    new THREE.Vector3(meshData.vertices[2][0], meshData.vertices[2][1], meshData.vertices[2][2])
+]);
+
+
+const points = curve.getPoints( 100 );
+const geometry = new THREE.BufferGeometry().setFromPoints( points );
+
+const material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+
+// Create the final object to add to the scene
+const curveObject = new THREE.Line( geometry, material );
+scene.add(curveObject);
 
 
 /* Sizes */
