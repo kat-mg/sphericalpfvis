@@ -15,6 +15,23 @@ const latlongToCartesian = (latitude, longitude, radius) => {
     return [x, y, z]
 }
 
+function createSphericalCurve(pointA, pointB, radius, segments = 100) {
+    const v0 = new THREE.Vector3(pointA[0], pointA[1], pointA[2]).normalize();
+    const v1 = new THREE.Vector3(pointB[0], pointB[1], pointB[2]).normalize();
+
+    const curvePoints = [];
+
+    for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const interpolated = new THREE.Vector3().lerpVectors(v0, v1, t).normalize().multiplyScalar(radius);
+        curvePoints.push(interpolated);
+    }
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+    return new THREE.Line(geometry, material);
+}
+
 /* Data */
 const meshData = {
     vertices: [
@@ -70,22 +87,21 @@ const particles = new THREE.Points(particleGeometry, particleMaterial);
 scene.add(particles);
 
 // Lines TODO
-const curve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(meshData.vertices[0][0], meshData.vertices[0][1], meshData.vertices[0][2]),
-    new THREE.Vector3(meshData.vertices[1][0], meshData.vertices[1][1], meshData.vertices[1][2]),
-    new THREE.Vector3(meshData.vertices[2][0], meshData.vertices[2][1], meshData.vertices[2][2])
-]);
+let noLines = 0;
+for (let i = 0; i < meshData.faces.length; i++) {
+    console.log("Polygon:", i);
+    for (let j = 0; j < meshData.faces[i].length - 1; j++) {
+        const currVertex = meshData.vertices[meshData.faces[i][j]];
+        const connectTo = meshData.vertices[meshData.faces[i][j + 1]];
 
+        console.log(meshData.faces[i][j], currVertex, "is gonna be connected to", meshData.faces[i][j + 1], connectTo);         // For debugging purposes
 
-const points = curve.getPoints( 100 );
-const geometry = new THREE.BufferGeometry().setFromPoints( points );
-
-const material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
-
-// Create the final object to add to the scene
-const curveObject = new THREE.Line( geometry, material );
-scene.add(curveObject);
-
+        const line = createSphericalCurve(currVertex, connectTo, 1);
+        scene.add(line);
+        noLines++;
+    }
+}
+console.log(noLines);           // For debugging purposes
 
 /* Sizes */
 const sizes = {
