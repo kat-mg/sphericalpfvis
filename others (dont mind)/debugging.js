@@ -62,12 +62,12 @@ const particleCount = meshData.vertices.length;
 const particlePositions = new Float32Array(particleCount * 3);
 
 for (let i = 0; i < particleCount; i++) {
-    console.log(i, meshData.vertices[i]);                       // For testing purposes
+    console.log(i, meshData.vertices[i]);                       // For debugging purposes
     const lat = meshData.vertices[i][0];
     const long = meshData.vertices[i][1];
     const [x, y, z] = latlongToCartesian(lat, long, 1);
     meshData.vertices[i] = [x, y, z];
-    console.log(meshData.vertices[i]);                       // For testing purposes
+    console.log(meshData.vertices[i]);                       // For debugging purposes
 }
 
 for (let i = 0; i < particleCount; i++) {

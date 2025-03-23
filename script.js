@@ -62,12 +62,12 @@ const particleCount = meshData.vertices.length;
 const particlePositions = new Float32Array(particleCount * 3);
 
 for (let i = 0; i < particleCount; i++) {
-    console.log(i, meshData.vertices[i]);                       // For testing purposes
+    console.log(i, meshData.vertices[i]);                       // For debugging purposes
     const lat = meshData.vertices[i][0];
     const long = meshData.vertices[i][1];
     const [x, y, z] = latlongToCartesian(lat, long, 1);
     meshData.vertices[i] = [x, y, z];
-    console.log(meshData.vertices[i]);                       // For testing purposes
+    console.log(meshData.vertices[i]);                       // For debugging purposes
 }
 
 for (let i = 0; i < particleCount; i++) {
@@ -87,7 +87,6 @@ const particles = new THREE.Points(particleGeometry, particleMaterial);
 scene.add(particles);
 
 // Lines TODO
-let noLines = 0;
 for (let i = 0; i < meshData.faces.length; i++) {
     console.log("Polygon:", i);         // For debugging purposes
     for (let j = 0; j < meshData.faces[i].length; j++) {
@@ -105,10 +104,8 @@ for (let i = 0; i < meshData.faces.length; i++) {
 
         const line = createSphericalCurve(currVertex, connectTo, 1);
         scene.add(line);
-        noLines++;
     }
 }
-console.log(noLines);           // For debugging purposes
 
 /* Sizes */
 const sizes = {
