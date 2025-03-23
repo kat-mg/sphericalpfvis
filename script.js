@@ -36,7 +36,7 @@ function createSphericalCurve(pointA, pointB, radius, segments = 100) {
 THREE.Cache.enabled = true;
 const fileLoader = new THREE.FileLoader();
 
-async function loadFile() {
+function loadFile() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
@@ -61,7 +61,9 @@ async function loadFile() {
                 }
                 resolve(meshData);
             },
-            undefined,
+            function (xhr) { 
+                console.log("Load File Progress!");
+            },
             function (error) {
                 reject(error);
             }
