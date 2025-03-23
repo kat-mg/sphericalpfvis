@@ -88,27 +88,32 @@ scene.add(particles);
 
 // Lines TODO
 let noLines = 0;
+const lines = [];
 for (let i = 0; i < meshData.faces.length; i++) {
-    console.log("Polygon:", i);         // For debugging purposes
-    for (let j = 0; j < meshData.faces[i].length; j++) {
-        let currVertex, connectTo;
-        if (j === meshData.faces[i].length - 1) {
-            currVertex = meshData.vertices[meshData.faces[i][j]];
-            connectTo = meshData.vertices[meshData.faces[i][0]];
-        }
-        else {
-            currVertex = meshData.vertices[meshData.faces[i][j]];
-            connectTo = meshData.vertices[meshData.faces[i][j + 1]];
-        }
+    console.log("Polygon:", i);
+    for (let j = 0; j < meshData.faces[i].length - 1; j++) {
+        const currVertex = meshData.vertices[meshData.faces[i][j]];
+        let connectTo = meshData.vertices[meshData.faces[i][j + 1]];
 
         console.log(meshData.faces[i][j], currVertex, "is gonna be connected to", meshData.faces[i][j + 1], connectTo);         // For debugging purposes
 
         const line = createSphericalCurve(currVertex, connectTo, 1);
-        scene.add(line);
+        lines.push(line);
         noLines++;
     }
 }
 console.log(noLines);           // For debugging purposes
+
+let currentLineIndex = 0;
+
+function addNextLine() {
+    if (currentLineIndex < lines.length) {
+        scene.add(lines[currentLineIndex]);
+        console.log("Line added:", lines[currentLineIndex]);           // For debugging purposes
+        currentLineIndex++;
+        setTimeout(addNextLine, 2000); // Add the next line after 2 seconds
+    }
+}
 
 /* Sizes */
 const sizes = {
@@ -166,3 +171,4 @@ const tick = () =>
 }
 
 tick()
+addNextLine(); // Start adding lines with a delay
