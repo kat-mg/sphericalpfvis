@@ -5,12 +5,20 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 const toRadians = (degrees) => degrees * Math.PI / 180;
 
 const latlongToCartesian = (latitude, longitude, radius) => {
+    console.log(latitude, longitude);           // debugging
     const lat = toRadians(latitude);
     const long = toRadians(longitude);
 
-    const x = radius * Math.cos(lat) * Math.cos(long);
-    const y = radius * Math.cos(lat) * Math.sin(long);
-    const z = radius * Math.sin(lat);
+    let x = radius * Math.cos(lat) * Math.cos(long);
+    let y = radius * Math.cos(lat) * Math.sin(long);
+    let z = radius * Math.sin(lat);
+
+    const epsilon = 0.0000000000000001;
+    if (Math.abs(x) < epsilon) x = 0;
+    if (Math.abs(y) < epsilon) y = 0;
+    if (Math.abs(z) < epsilon) z = 0;
+
+    console.log(x, y, z);           // debugging
 
     return [x, y, z];
 }
@@ -40,7 +48,7 @@ function loadFile() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
-        fileLoader.load('cubic.sph', 
+        fileLoader.load('./mesh files/sphere1.sph', 
             function (data) {
                 const lines = data.split('\n');
                 const line1 = lines[1].split(' ');
@@ -73,6 +81,7 @@ function loadFile() {
 
 async function init() {
     const meshData = await loadFile();
+    console.log(meshData);              // debugging
     /* Scene */
     // Canvas
     const canvas = document.querySelector('canvas.webgl');
@@ -102,18 +111,20 @@ async function init() {
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
         particlePositions[i * 3 + 2] = meshData.vertices[i][2];
-    }
+    } // could probably optimize this by using a single loop, but this is fine for now
+
+    console.log(particlePositions);         // debugging
 
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
 
     const particleMaterial = new THREE.PointsMaterial();
     particleMaterial.size = 0.03;
     particleMaterial.sizeAttenuation = true;
-    particleMaterial.wireframe = true;
+    particleMaterial.wireframe = false;
     const particles = new THREE.Points(particleGeometry, particleMaterial);
     scene.add(particles);
 
-    // Lines TODO
+    // Lines
     for (let i = 0; i < meshData.faces.length; i++) {
         for (let j = 0; j < meshData.faces[i].length; j++) {
             let currVertex, connectTo;
