@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+import { label } from 'three/tsl';
 
 /* Functions */
 const toRadians = (degrees) => degrees * Math.PI / 180;
 
 const latlongToCartesian = (latitude, longitude, radius) => {
-    console.log(latitude, longitude);           // debugging
     const lat = toRadians(latitude);
     const long = toRadians(longitude);
 
@@ -17,8 +18,6 @@ const latlongToCartesian = (latitude, longitude, radius) => {
     if (Math.abs(x) < epsilon) x = 0;
     if (Math.abs(y) < epsilon) y = 0;
     if (Math.abs(z) < epsilon) z = 0;
-
-    console.log(x, y, z);           // debugging
 
     return [x, y, z];
 }
@@ -36,15 +35,32 @@ function createSphericalCurve(pointA, pointB, radius, segments = 100) {
     }
 
     const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-    return new THREE.Line(geometry, material);
+    let material = new THREE.LineBasicMaterial({ color: 0x0b5208 });
+    return [new THREE.Line(geometry, material), curvePoints];
+}
+
+function initLineCreate(pointA, pointB, radius, segments = 100) {
+    const v0 = new THREE.Vector3(pointA[0], pointA[1], pointA[2]).normalize();
+    const v1 = new THREE.Vector3(pointB[0], pointB[1], pointB[2]).normalize();
+
+    const curvePoints = [];
+
+    for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const interpolated = new THREE.Vector3().lerpVectors(v0, v1, t).normalize().multiplyScalar(radius+0.1);
+        curvePoints.push(interpolated);
+    }
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    let material = new THREE.LineBasicMaterial({ color: 0xFFFF00 });
+    return [new THREE.Line(geometry, material), curvePoints];
 }
 
 /* Data */
 THREE.Cache.enabled = true;
 const fileLoader = new THREE.FileLoader();
 
-function loadFile() {
+function loadMesh() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
@@ -79,9 +95,34 @@ function loadFile() {
     });
 }
 
+function loadResult() {
+    return new Promise((resolve, reject) => {
+        let resultData = [];
+
+        fileLoader.load('./result files/result1.res',
+            function (data) {
+                const lines = data.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].split(' ');
+                    const lat = parseFloat(line[0]);  
+                    const long = parseFloat(line[1]);
+                    const [x, y, z] = latlongToCartesian(lat, long, 1);
+                    resultData.push([x, y, z]);
+                }
+                resolve(resultData);
+            },
+            function (xhr) {
+                console.log("Load File Progress!");
+            },
+            function (error) {
+                reject(error);
+            }
+        );
+    })
+}
+
 async function init() {
-    const meshData = await loadFile();
-    console.log(meshData);              // debugging
+    const meshData = await loadMesh();
     /* Scene */
     // Canvas
     const canvas = document.querySelector('canvas.webgl');
@@ -91,7 +132,7 @@ async function init() {
 
     // Sphere Object
     const geometrySphere = new THREE.SphereGeometry(1, 32, 32);
-    const materialSphere = new THREE.MeshBasicMaterial({ color: 0x0b5208, transparent: true, opacity: 0.3, wireframe: true });
+    const materialSphere = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
 
@@ -108,12 +149,18 @@ async function init() {
     }
 
     for (let i = 0; i < particleCount; i++) {
+        const particleDiv = document.createElement('div');
+        particleDiv.className = 'label';
+        particleDiv.textContent = `P${i}`;
+        particleDiv.style.color = 'white';
+        const particleLabel = new CSS2DObject(particleDiv);
+        particleLabel.position.set(meshData.vertices[i][0], meshData.vertices[i][1], meshData.vertices[i][2]);
+        scene.add(particleLabel);
+
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
         particlePositions[i * 3 + 2] = meshData.vertices[i][2];
     } // could probably optimize this by using a single loop, but this is fine for now
-
-    console.log(particlePositions);         // debugging
 
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
 
@@ -126,6 +173,7 @@ async function init() {
 
     // Lines
     for (let i = 0; i < meshData.faces.length; i++) {
+        let linePoints = [];
         for (let j = 0; j < meshData.faces[i].length; j++) {
             let currVertex, connectTo;
             if (j === meshData.faces[i].length - 1) {
@@ -137,9 +185,25 @@ async function init() {
                 connectTo = meshData.vertices[meshData.faces[i][j + 1]];
             }
 
-            const line = createSphericalCurve(currVertex, connectTo, 1);
-            scene.add(line);
+            const line = initLineCreate(currVertex, connectTo, 1);
+            scene.add(line[0]);
+
+            if (j === meshData.faces[i].length - 1) {
+                linePoints = linePoints.flat();
+                for (let k = 0; k < linePoints.length; k++) {
+                    const linePoint = [linePoints[k].x, linePoints[k].y, linePoints[k].z];
+                    const line2 = createSphericalCurve(currVertex, linePoint, 1);
+                    scene.add(line2[0]);
+                }
+            }
+            else if (j === meshData.faces[i].length - 2) {
+                continue;
+            }
+            else {
+                linePoints.push(line[1]); // no need for this for the last node
+            }
         }
+        linePoints = [];
     }
 
     /* Sizes */
@@ -180,6 +244,13 @@ async function init() {
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+    const css2DRenderer = new CSS2DRenderer();
+    css2DRenderer.setSize(sizes.width, sizes.height);
+    css2DRenderer.domElement.style.position = 'absolute';
+    css2DRenderer.domElement.style.top = '0px';
+    css2DRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(css2DRenderer.domElement);
+
     /* Animate */
     const clock = new THREE.Clock();
 
@@ -192,6 +263,7 @@ async function init() {
 
         // Render
         renderer.render(scene, camera);
+        css2DRenderer.render(scene, camera); // Render labels using CSS2DRenderer
 
         // Call tick again on the next frame
         window.requestAnimationFrame(tick);
