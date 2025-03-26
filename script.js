@@ -22,7 +22,7 @@ const latlongToCartesian = (latitude, longitude, radius) => {
     return [x, y, z];
 }
 
-function createSphericalCurve(pointA, pointB, radius, segments = 100) {
+function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segments = 100) {
     const v0 = new THREE.Vector3(pointA[0], pointA[1], pointA[2]).normalize();
     const v1 = new THREE.Vector3(pointB[0], pointB[1], pointB[2]).normalize();
 
@@ -30,29 +30,12 @@ function createSphericalCurve(pointA, pointB, radius, segments = 100) {
 
     for (let i = 0; i <= segments; i++) {
         const t = i / segments;
-        const interpolated = new THREE.Vector3().lerpVectors(v0, v1, t).normalize().multiplyScalar(radius);
+        const interpolated = new THREE.Vector3().lerpVectors(v0, v1, t).normalize().multiplyScalar(radius + add);
         curvePoints.push(interpolated);
     }
 
     const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-    let material = new THREE.LineBasicMaterial({ color: 0x0b5208 });
-    return [new THREE.Line(geometry, material), curvePoints];
-}
-
-function initLineCreate(pointA, pointB, radius, segments = 100) {
-    const v0 = new THREE.Vector3(pointA[0], pointA[1], pointA[2]).normalize();
-    const v1 = new THREE.Vector3(pointB[0], pointB[1], pointB[2]).normalize();
-
-    const curvePoints = [];
-
-    for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const interpolated = new THREE.Vector3().lerpVectors(v0, v1, t).normalize().multiplyScalar(radius+0.1);
-        curvePoints.push(interpolated);
-    }
-
-    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-    let material = new THREE.LineBasicMaterial({ color: 0xFFFF00 });
+    let material = new THREE.LineBasicMaterial({ color: lineColor });
     return [new THREE.Line(geometry, material), curvePoints];
 }
 
@@ -99,7 +82,7 @@ function loadResult() {
     return new Promise((resolve, reject) => {
         let resultData = [];
 
-        fileLoader.load('./result files/result1.res',
+        fileLoader.load('./result files/sphere1res.txt',
             function (data) {
                 const lines = data.split('\n');
                 for (let i = 0; i < lines.length; i++) {
@@ -134,7 +117,7 @@ async function init() {
     const geometrySphere = new THREE.SphereGeometry(1, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
-    scene.add(meshSphere);
+    //scene.add(meshSphere);
 
     // Particles Object
     const particleGeometry = new THREE.BufferGeometry();
@@ -185,14 +168,14 @@ async function init() {
                 connectTo = meshData.vertices[meshData.faces[i][j + 1]];
             }
 
-            const line = initLineCreate(currVertex, connectTo, 1);
+            const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
             scene.add(line[0]);
 
             if (j === meshData.faces[i].length - 1) {
                 linePoints = linePoints.flat();
                 for (let k = 0; k < linePoints.length; k++) {
                     const linePoint = [linePoints[k].x, linePoints[k].y, linePoints[k].z];
-                    const line2 = createSphericalCurve(currVertex, linePoint, 1);
+                    const line2 = createSphericalCurve(currVertex, linePoint, 1, 0x0b5208);
                     scene.add(line2[0]);
                 }
             }
@@ -204,6 +187,29 @@ async function init() {
             }
         }
         linePoints = [];
+    }
+
+    // Results
+    const resultData = await loadResult();
+    for (let i = 0; i < resultData.length; i++) {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'label';
+        resultDiv.textContent = `R${i}`;
+        resultDiv.style.color = 'white';
+        const resultLabel = new CSS2DObject(resultDiv);
+        resultLabel.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
+        scene.add(resultLabel); // can make this into a function (these codes are repetitive)
+
+        const pointSphereGeom = new THREE.SphereGeometry(0.02, 32, 32);
+        const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
+        const pointSphere = new THREE.Mesh(pointSphereGeom, pointSphereMat);
+        pointSphere.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
+        scene.add(pointSphere);
+        
+        if (i !== resultData.length - 1) {
+            const line = createSphericalCurve(resultData[i], resultData[i + 1], 1);
+            scene.add(line[0]);
+        }
     }
 
     /* Sizes */
