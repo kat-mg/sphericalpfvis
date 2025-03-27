@@ -39,6 +39,16 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
     return [new THREE.Line(geometry, material), curvePoints];
 }
 
+function createLabel(text, position) {
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'label';
+    labelDiv.textContent = text;
+    labelDiv.style.color = 'white';
+    const label = new CSS2DObject(labelDiv);
+    label.position.set(position[0], position[1], position[2]);
+    return label;
+}
+
 /* Data */
 THREE.Cache.enabled = true;
 const fileLoader = new THREE.FileLoader();
@@ -117,7 +127,7 @@ async function init() {
     const geometrySphere = new THREE.SphereGeometry(1, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
-    //scene.add(meshSphere);
+    scene.add(meshSphere);
 
     // Particles Object
     const particleGeometry = new THREE.BufferGeometry();
@@ -132,12 +142,7 @@ async function init() {
     }
 
     for (let i = 0; i < particleCount; i++) {
-        const particleDiv = document.createElement('div');
-        particleDiv.className = 'label';
-        particleDiv.textContent = `P${i}`;
-        particleDiv.style.color = 'white';
-        const particleLabel = new CSS2DObject(particleDiv);
-        particleLabel.position.set(meshData.vertices[i][0], meshData.vertices[i][1], meshData.vertices[i][2]);
+        const particleLabel = createLabel(`P${i}`, meshData.vertices[i]);
         scene.add(particleLabel);
 
         particlePositions[i * 3] = meshData.vertices[i][0];
@@ -192,12 +197,7 @@ async function init() {
     // Results
     const resultData = await loadResult();
     for (let i = 0; i < resultData.length; i++) {
-        const resultDiv = document.createElement('div');
-        resultDiv.className = 'label';
-        resultDiv.textContent = `R${i}`;
-        resultDiv.style.color = 'white';
-        const resultLabel = new CSS2DObject(resultDiv);
-        resultLabel.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
+        const resultLabel = createLabel(`R${i}`, resultData[i]);
         scene.add(resultLabel); // can make this into a function (these codes are repetitive)
 
         const pointSphereGeom = new THREE.SphereGeometry(0.02, 32, 32);
