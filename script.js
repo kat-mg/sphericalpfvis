@@ -179,12 +179,26 @@ function loadResult() {
 
 async function init() {
     const meshData = await loadMesh();
+
     /* Scene */
     // Canvas
     const canvas = document.querySelector('canvas.webgl');
 
     // Scene
     const scene = new THREE.Scene();
+
+    // Mesh Info
+    // const meshDataString = JSON.stringify(meshData, null, 2); 
+    // const meshDiv = document.createElement('div');
+    // meshDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    // meshDiv.className = 'meshInfo';
+    // meshDiv.textContent = meshDataString;
+    // meshDiv.style.position = 'static';
+    // meshDiv.style.color = 'white';
+    // const meshInfo = new CSS2DObject(meshDiv);
+    // meshInfo.position.set(0, 2, 0);
+    // meshInfo.scale.set(0.1, 0.1, 0.1);
+    // scene.add(meshInfo);
 
     // Sphere Object
     const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
