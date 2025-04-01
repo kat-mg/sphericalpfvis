@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+import { Earcut } from 'three/src/extras/Earcut.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 /* Functions */
 const toRadians = (degrees) => degrees * Math.PI / 180;
@@ -21,7 +25,7 @@ const latlongToCartesian = (latitude, longitude, radius) => {
     return [x, y, z];
 }
 
-function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segments = 100) {
+function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segments = 100, result = false) {
     const v0 = new THREE.Vector3(pointA[0], pointA[1], pointA[2]).normalize();
     const v1 = new THREE.Vector3(pointB[0], pointB[1], pointB[2]).normalize();
 
@@ -33,9 +37,65 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
         curvePoints.push(interpolated);
     }
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-    let material = new THREE.LineBasicMaterial({ color: lineColor });
-    return [new THREE.Line(geometry, material), curvePoints];
+    if (result) {
+        // to(?)
+    } else {
+        const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+        let material = new THREE.LineBasicMaterial({ color: lineColor });
+        return [new THREE.Line(geometry, material), curvePoints];
+    }
+}
+
+function createSphericalTriangle(points, edgeVertices = 50){
+    let vectorA = new THREE.Vector3(points[0][0],points[0][1],points[0][2]);
+    let vectorB = new THREE.Vector3(points[1][0],points[1][1],points[1][2]);
+    let vectorC = new THREE.Vector3(points[2][0],points[2][1],points[2][2]);
+
+    const quaternionAB = new THREE.Quaternion();
+    quaternionAB.setFromUnitVectors(vectorA.normalize(), vectorB.normalize());
+    const quaternionAC = new THREE.Quaternion();
+    quaternionAC.setFromUnitVectors(vectorA.normalize(), vectorC.normalize());
+
+    let vertices = [];
+    let indices = [];
+
+    // Compute Vertices
+    const currVector = new THREE.Vector3();
+    const ghostVector = new THREE.Vector3();
+    const currQuat = new THREE.Quaternion();
+    for (let col = 0; col < edgeVertices + 2; col++){
+        for (let row = 0; row < edgeVertices + 2 - col; row++){
+            currVector.copy(vectorA);
+            currQuat.identity();
+
+            currVector.lerp(vectorB, row/(edgeVertices+1));
+            ghostVector.copy(vectorC).lerp(vectorB, row/(edgeVertices+1));
+
+            currVector.lerp(ghostVector, col/Math.max(edgeVertices+1-row, 1));
+            
+            currVector.setLength(0.99);
+            let pos = currVector.toArray();
+            vertices.push(pos[0],pos[1],pos[2])
+        }
+    }
+
+    // Compute Faces
+    for (let col = 0; col < edgeVertices + 1; col++){
+        let prevColStart = getColumnStartIndex(col-1, edgeVertices);
+        let colStart = getColumnStartIndex(col, edgeVertices);
+        let nextColStart = getColumnStartIndex(col+1, edgeVertices);
+        for (let row = 0; row < edgeVertices + 1 - col; row++){
+            indices.push(colStart+row,colStart+row+1, nextColStart+row);
+            if (col > 0)
+                indices.push(colStart+row,colStart+row+1, prevColStart+row+1);
+        }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+    geometry.setIndex( indices );
+    const material = new THREE.MeshBasicMaterial( { side: THREE.DoubleSide, color: 0x008000 });
+    return new THREE.Mesh( geometry, material );
 }
 
 function createLabel(text, position) {
@@ -46,6 +106,10 @@ function createLabel(text, position) {
     const label = new CSS2DObject(labelDiv);
     label.position.set(position[0], position[1], position[2]);
     return label;
+}
+
+function getColumnStartIndex(col, edgeVertices){
+    return col*(edgeVertices+2) - col*(col-1)/2;
 }
 
 /* Data */
@@ -123,8 +187,8 @@ async function init() {
     const scene = new THREE.Scene();
 
     // Sphere Object
-    const geometrySphere = new THREE.SphereGeometry(1, 32, 32);
-    const materialSphere = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6});
+    const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
+    const materialSphere = new THREE.MeshBasicMaterial({ color: 0xc30010});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
 
@@ -158,9 +222,28 @@ async function init() {
     const particles = new THREE.Points(particleGeometry, particleMaterial);
     scene.add(particles);
 
-    // Lines
+    // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
-        let linePoints = [];
+        let face_indices = [];
+        if(meshData.faces[i].length > 3) {
+            let faceVertices = [];
+            for (let j = 0; j < meshData.faces[i].length; j++)
+                faceVertices.push( meshData.vertices[meshData.faces[i][j]]);
+            faceVertices = faceVertices.flat();
+            console.log(faceVertices);
+            face_indices = Earcut.triangulate(faceVertices,[],3);
+        } else {
+            face_indices = [meshData.faces[i][0],meshData.faces[i][1],meshData.faces[i][2]];
+        }
+
+        for (let t = 0; t < face_indices.length; t += 3) {
+            let triangleVertices = [];
+            for (let o = 0; o < 3; o++)
+                triangleVertices.push(meshData.vertices[face_indices[t+o]])
+            let sphericalTriangles = createSphericalTriangle(triangleVertices);
+            scene.add(sphericalTriangles);
+        }
+
         for (let j = 0; j < meshData.faces[i].length; j++) {
             let currVertex, connectTo;
             if (j === meshData.faces[i].length - 1) {
@@ -174,30 +257,12 @@ async function init() {
 
             const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
             scene.add(line[0]);
-
-            if (j === meshData.faces[i].length - 1) {
-                linePoints = linePoints.flat();
-                for (let k = 0; k < linePoints.length; k++) {
-                    const linePoint = [linePoints[k].x, linePoints[k].y, linePoints[k].z];
-                    const line2 = createSphericalCurve(currVertex, linePoint, 1, 0x0b5208);
-                    scene.add(line2[0]);
-                }
-            }
-            else if (j === meshData.faces[i].length - 2) {
-                continue;
-            }
-            else {
-                linePoints.push(line[1]); // no need for this for the last node
-            }
         }
-        linePoints = [];
     }
 
     // Results
     const resultData = await loadResult();
     for (let i = 0; i < resultData.length; i++) {
-        //const resultLabel = createLabel(`R${i}`, resultData[i]);
-        //scene.add(resultLabel); // can make this into a function (these codes are repetitive)
 
         const pointSphereGeom = new THREE.SphereGeometry(0.02, 32, 32);
         const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
@@ -206,7 +271,7 @@ async function init() {
         scene.add(pointSphere);
         
         if (i !== resultData.length - 1) {
-            const line = createSphericalCurve(resultData[i], resultData[i + 1], 1);
+            const line = createSphericalCurve(resultData[i], resultData[i + 1], 1, 0xbae1ff);
             scene.add(line[0]);
         }
     }
