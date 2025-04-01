@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { label } from 'three/tsl';
 
 /* Functions */
 const toRadians = (degrees) => degrees * Math.PI / 180;
@@ -125,7 +124,7 @@ async function init() {
 
     // Sphere Object
     const geometrySphere = new THREE.SphereGeometry(1, 32, 32);
-    const materialSphere = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5});
+    const materialSphere = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
 
@@ -197,8 +196,8 @@ async function init() {
     // Results
     const resultData = await loadResult();
     for (let i = 0; i < resultData.length; i++) {
-        const resultLabel = createLabel(`R${i}`, resultData[i]);
-        scene.add(resultLabel); // can make this into a function (these codes are repetitive)
+        //const resultLabel = createLabel(`R${i}`, resultData[i]);
+        //scene.add(resultLabel); // can make this into a function (these codes are repetitive)
 
         const pointSphereGeom = new THREE.SphereGeometry(0.02, 32, 32);
         const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
