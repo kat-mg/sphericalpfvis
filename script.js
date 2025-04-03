@@ -38,7 +38,7 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
     }
 
     if (result) {
-        // to(?)
+        // to do(?)
     } else {
         const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
         let material = new THREE.LineBasicMaterial({ color: lineColor });
@@ -47,9 +47,10 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
 }
 
 function createSphericalTriangle(points, edgeVertices = 50){
-    let vectorA = new THREE.Vector3(points[0][0],points[0][1],points[0][2]);
-    let vectorB = new THREE.Vector3(points[1][0],points[1][1],points[1][2]);
-    let vectorC = new THREE.Vector3(points[2][0],points[2][1],points[2][2]);
+    console.log("triangles", points);
+    let vectorA = new THREE.Vector3(points[0],points[1],points[2]);
+    let vectorB = new THREE.Vector3(points[3],points[4],points[5]);
+    let vectorC = new THREE.Vector3(points[6],points[7],points[8]);
 
     const quaternionAB = new THREE.Quaternion();
     quaternionAB.setFromUnitVectors(vectorA.normalize(), vectorB.normalize());
@@ -120,7 +121,7 @@ function loadMesh() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
-        fileLoader.load('./mesh files/sphere1.sph', 
+        fileLoader.load('./mesh files/sphere4.sph', 
             function (data) {
                 const lines = data.split('\n');
                 const line1 = lines[1].split(' ');
@@ -239,21 +240,26 @@ async function init() {
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
         let face_indices = [];
-        if(meshData.faces[i].length > 3) {
-            let faceVertices = [];
-            for (let j = 0; j < meshData.faces[i].length; j++)
-                faceVertices.push( meshData.vertices[meshData.faces[i][j]]);
-            faceVertices = faceVertices.flat();
-            console.log(faceVertices);
-            face_indices = Earcut.triangulate(faceVertices,[],3);
+        let face_vertices = [];
+        for (let j = 0; j < meshData.faces[i].length; j++){
+            face_vertices.push(meshData.vertices[meshData.faces[i][j]]);
+        }
+        face_vertices = face_vertices.flat();
+        
+        if (meshData.faces[i].length > 3) {
+            face_indices = Earcut.triangulate(face_vertices,[],3);
         } else {
             face_indices = [meshData.faces[i][0],meshData.faces[i][1],meshData.faces[i][2]];
         }
-
+        console.log("face_indices ", face_indices);
         for (let t = 0; t < face_indices.length; t += 3) {
             let triangleVertices = [];
-            for (let o = 0; o < 3; o++)
-                triangleVertices.push(meshData.vertices[face_indices[t+o]])
+            for (let v = 0; v < 3; v++){
+                let vertex_index = face_indices[t+v];
+                for (let c = 0; c < 3; c++){
+                    triangleVertices.push(meshData.vertices[vertex_index][c]);
+                }
+            }
             let sphericalTriangles = createSphericalTriangle(triangleVertices);
             scene.add(sphericalTriangles);
         }
@@ -273,7 +279,7 @@ async function init() {
             scene.add(line[0]);
         }
     }
-
+    console.log("done with faces and lines");
     // Results
     const resultData = await loadResult();
     for (let i = 0; i < resultData.length; i++) {
