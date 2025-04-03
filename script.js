@@ -56,7 +56,7 @@ function loadMesh() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
-        fileLoader.load('./mesh files/sphere1.sph', 
+        fileLoader.load('./mesh files/sphere4.sph', 
             function (data) {
                 const lines = data.split('\n');
                 const line1 = lines[1].split(' ');
