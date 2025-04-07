@@ -23,13 +23,6 @@ const latlongToCartesian = (latitude, longitude, radius) => {
     return [x, y, z];
 }
 
-const cartesianToLonglat = (pos) => {
-    const [x,y,z] = pos;
-    const lat = toDegrees(Math.acos(x))-90;
-    const long = toDegrees(Math.atan2(y,z))-180;
-    return [long, lat];
-}
-
 function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segments = 100, result = false) {
     const v0 = new THREE.Vector3(pointA[0], pointA[1], pointA[2]).normalize();
     const v1 = new THREE.Vector3(pointB[0], pointB[1], pointB[2]).normalize();
@@ -205,8 +198,6 @@ function generate_random_points(num_points=100){
     let vertices = [];
     let vec3 = new THREE.Vector3();
     for (let point_i=0; point_i < num_points; point_i++){
-        //vec3.set(gaussianRandom(), gaussianRandom(), gaussianRandom()).normalize();
-        //vertices.push(cartesianToLonglat(vec3.toArray()));
         let rll = randomLongLat()
         vertices.push(rll);
     }
@@ -228,7 +219,7 @@ function shuffle(array) {
       [array[currentIndex], array[randomIndex]] = [
         array[randomIndex], array[currentIndex]];
     }
-  }
+}
 
 function remove_triangles(triangles, percent) {
     console.log("og length ", triangles.length);
@@ -240,12 +231,23 @@ function remove_triangles(triangles, percent) {
 
 async function init() {
     //const meshData = await loadMesh();
-    const random_points = generate_random_points(1000);
+    const random_points = generate_random_points(10);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
     console.log(delaunay);
     const d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
+
+    let chosenNeighbors = [];
+    for (let i = 0; i < d_triangles.length; i++) {
+        for (let j = 0; j < delaunay.triangles.length; j++) {
+            if (d_triangles[i] === delaunay.triangles[j]) {
+                console.log(j, ":", delaunay.neighbors[j]);
+            }
+        }
+    }
     const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
-    
+    console.log(meshData);
+    console.log(chosenNeighbors);
+
     /* Scene */
     // Canvas
     const canvas = document.querySelector('canvas.webgl');
@@ -286,7 +288,7 @@ async function init() {
 
     for (let i = 0; i < particleCount; i++) {
         const particleLabel = createLabel(`P${i}`, meshData.vertices[i]);
-        //scene.add(particleLabel);
+        scene.add(particleLabel);
 
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
@@ -300,7 +302,7 @@ async function init() {
     particleMaterial.sizeAttenuation = true;
     particleMaterial.wireframe = false;
     const particles = new THREE.Points(particleGeometry, particleMaterial);
-    //scene.add(particles);
+    scene.add(particles);
 
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
@@ -339,7 +341,7 @@ async function init() {
             }
 
             const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
-            //scene.add(line[0]);
+            scene.add(line[0]);
         }
     }
     
