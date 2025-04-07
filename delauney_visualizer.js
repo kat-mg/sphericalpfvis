@@ -190,12 +190,14 @@ function loadResult() {
     })
 }
 
-function randomLatLong(){ 
+function randomLongLat(){ 
     // uniformly random lat long on the surface of unit sphere
     // (eto yung nasa link pero mukhang di gumagana)
     let u = Math.random();
     let v = Math.random();
-    return [toDegrees(Math.acos(2*v-1))-90, 360*u-180];
+    var lat = toDegrees(Math.acos(2*v-1))-90;
+    var long = 360*u-180;
+    return [long, lat];
 }
 
 function generate_random_points(num_points=100){
@@ -205,7 +207,7 @@ function generate_random_points(num_points=100){
     for (let point_i=0; point_i < num_points; point_i++){
         //vec3.set(gaussianRandom(), gaussianRandom(), gaussianRandom()).normalize();
         //vertices.push(cartesianToLonglat(vec3.toArray()));
-        let rll = randomLatLong()
+        let rll = randomLongLat()
         vertices.push(rll);
     }
     console.log(vertices.map((x) => x));
@@ -214,10 +216,10 @@ function generate_random_points(num_points=100){
 
 async function init() {
     //const meshData = await loadMesh();
-    const random_points = generate_random_points(1000);
+    const random_points = generate_random_points(500);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
     console.log(delaunay);
-    const d_triangles = [];delaunay.triangles; // get calculated triangles
+    const d_triangles = delaunay.triangles; // get calculated triangles
     const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
     
     /* Scene */
@@ -252,8 +254,8 @@ async function init() {
     const particlePositions = new Float32Array(particleCount * 3);
 
     for (let i = 0; i < particleCount; i++) {
-        const lat = meshData.vertices[i][0];
-        const long = meshData.vertices[i][1];
+        const lat = meshData.vertices[i][1];
+        const long = meshData.vertices[i][0];
         const [x, y, z] = latlongToCartesian(lat, long, 1);
         meshData.vertices[i] = [x, y, z];
     }
