@@ -210,16 +210,40 @@ function generate_random_points(num_points=100){
         let rll = randomLongLat()
         vertices.push(rll);
     }
-    console.log(vertices.map((x) => x));
+    //console.log(vertices.map((x) => x));
     return vertices;
+}
+
+function shuffle(array) {
+    let currentIndex = array.length;
+  
+    // While there remain elements to shuffle...
+    while (currentIndex != 0) {
+  
+      // Pick a remaining element...
+      let randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+  
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+  }
+
+function remove_triangles(triangles, percent) {
+    console.log("og length ", triangles.length);
+    shuffle(triangles);
+    triangles = triangles.slice(Math.floor(triangles.length * (percent)));
+    console.log("new length ", triangles.length);
+    return triangles;
 }
 
 async function init() {
     //const meshData = await loadMesh();
-    const random_points = generate_random_points(500);
+    const random_points = generate_random_points(1000);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
     console.log(delaunay);
-    const d_triangles = delaunay.triangles; // get calculated triangles
+    const d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
     const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
     
     /* Scene */
@@ -276,7 +300,7 @@ async function init() {
     particleMaterial.sizeAttenuation = true;
     particleMaterial.wireframe = false;
     const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
+    //scene.add(particles);
 
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
@@ -315,7 +339,7 @@ async function init() {
             }
 
             const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
-            scene.add(line[0]);
+            //scene.add(line[0]);
         }
     }
     
