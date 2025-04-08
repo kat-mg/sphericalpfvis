@@ -54,18 +54,57 @@ const meshData = {vertices:random_points, faces:d_triangles}; // set vertices an
 
 console.log(meshData);
 
+/* .sph creation */
+
 let data = "sph";
 
+// Neighbors ni vertices
+let vertNeighbors = delaunay.neighbors.map((x) => x);
 for (let i = 0; i < meshData.vertices.length + meshData.faces.length; i++) {
     if (i < meshData.vertices.length) {
         data = data.concat("\n", meshData.vertices[i][0], " ", meshData.vertices[i][1]);
+        for (let j = 0; j < vertNeighbors[i].length; j++) {
+            data = data.concat(" ", vertNeighbors[i][j]);
+        }
     }
     else {
         data = data.concat("\n");
         for (let j = 0; j < meshData.faces[i - meshData.vertices.length].length; j++) {
-            data = data.concat(" ", meshData.faces[i - meshData.vertices.length][j]);
+            if (j != 0) {
+                data = data.concat(" ");
+            }
+            data = data.concat(meshData.faces[i - meshData.vertices.length][j]);
         }
     }
 }
+
+// Neighbors ni faces (O(n^4) very not optimal)
+let chosenNeighbors = [];
+for (let i = 0; i < d_triangles.length; i++) {
+    let thisFaceNeghbors = [];
+    for (let j = 0; j < d_triangles.length; j++) {
+        if (i != j) {
+            // check if triangles i and j share an edge
+            let shared = 0;
+            for (let k = 0; k < 3; k++) {
+                for (let l = 0; l < 3; l++) {
+                    if (d_triangles[i][k] == d_triangles[j][l]) {
+                        shared++;
+                    }
+                }
+            }
+            if (shared == 2) {
+                thisFaceNeghbors.push(j);
+                continue;
+            }
+        }
+    }
+
+    while (thisFaceNeghbors.length < 3) {
+        thisFaceNeghbors.push(-1);
+    }
+    chosenNeighbors.push(thisFaceNeghbors);
+}
+console.log("Chosen:", chosenNeighbors);
 
 console.log("Data:", data);

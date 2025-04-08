@@ -236,14 +236,53 @@ async function init() {
     console.log(delaunay);
     const d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
 
+    // Neighbors ni faces (O(n^4) very not optimal)
     let chosenNeighbors = [];
     for (let i = 0; i < d_triangles.length; i++) {
-        for (let j = 0; j < delaunay.triangles.length; j++) {
-            if (d_triangles[i] === delaunay.triangles[j]) {
-                console.log(j, ":", delaunay.neighbors[j]);
+        let thisFaceNeghbors = [];
+        for (let j = 0; j < d_triangles.length; j++) {
+            if (i != j) {
+                // Get d_triangles[i]'s edges
+                let edgesI = [
+                    [d_triangles[i][0], d_triangles[i][1]],
+                    [d_triangles[i][1], d_triangles[i][2]],
+                    [d_triangles[i][2], d_triangles[i][0]]
+                ];
+                
+                // Get d_triangles[j]'s edges
+                let edgesJ = [
+                    [d_triangles[j][0], d_triangles[j][1]],
+                    [d_triangles[j][1], d_triangles[j][2]],
+                    [d_triangles[j][2], d_triangles[j][0]]
+                ];
+                let sharedEdge = false;
+
+                for (let k = 0; k < edgesI.length; k++) {
+                    if (sharedEdge) {
+                        break;
+                    }
+                    for (let l = 0; l < edgesJ.length; l++) {
+                        if ((edgesI[k][0] == edgesJ[l][0] && edgesI[k][1] == edgesJ[l][1]) ||
+                            (edgesI[k][0] == edgesJ[l][1] && edgesI[k][1] == edgesJ[l][0])) {
+                            console.log("found shared edge", edgesI[k], edgesJ[l]);
+                            sharedEdge = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (sharedEdge) {
+                    thisFaceNeghbors.push(j);
+                } 
+                else {
+                    thisFaceNeghbors.push(-1);
+                }   // if no shared edges, add -1 to thisFaceNeghbors
+
             }
         }
+        chosenNeighbors.push(thisFaceNeghbors);
     }
+
     const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
     console.log(meshData);
     console.log(chosenNeighbors);
