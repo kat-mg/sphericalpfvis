@@ -240,6 +240,7 @@ async function init() {
     let chosenNeighbors = [];
     for (let i = 0; i < d_triangles.length; i++) {
         let thisFaceNeghbors = [];
+        let edgesXHasNeighbors = [false, false, false];
         for (let j = 0; j < d_triangles.length; j++) {
             if (i != j) {
                 // Get d_triangles[i]'s edges
@@ -266,6 +267,7 @@ async function init() {
                             (edgesI[k][0] == edgesJ[l][1] && edgesI[k][1] == edgesJ[l][0])) {
                             console.log("found shared edge", edgesI[k], edgesJ[l]);
                             sharedEdge = true;
+                            edgesXHasNeighbors[k] = true;
                             break;
                         }
                     }
@@ -274,9 +276,6 @@ async function init() {
                 if (sharedEdge) {
                     thisFaceNeghbors.push(j);
                 } 
-                else {
-                    thisFaceNeghbors.push(-1);
-                }   // if no shared edges, add -1 to thisFaceNeghbors
 
             }
         }
