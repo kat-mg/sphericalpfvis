@@ -44,7 +44,7 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
     }
 }
 
-function createSphericalTriangle(points, edgeVertices = 70){
+function createSphericalTriangle(points, edgeVertices = 70) {
     let vectorA = new THREE.Vector3(points[0],points[1],points[2]);
     let vectorB = new THREE.Vector3(points[3],points[4],points[5]);
     let vectorC = new THREE.Vector3(points[6],points[7],points[8]);
@@ -61,8 +61,8 @@ function createSphericalTriangle(points, edgeVertices = 70){
     const currVector = new THREE.Vector3();
     const ghostVector = new THREE.Vector3();
     const currQuat = new THREE.Quaternion();
-    for (let col = 0; col < edgeVertices + 2; col++){
-        for (let row = 0; row < edgeVertices + 2 - col; row++){
+    for (let col = 0; col < edgeVertices + 2; col++) {
+        for (let row = 0; row < edgeVertices + 2 - col; row++) {
             currVector.copy(vectorA);
             currQuat.identity();
 
@@ -78,11 +78,11 @@ function createSphericalTriangle(points, edgeVertices = 70){
     }
 
     // Compute Faces
-    for (let col = 0; col < edgeVertices + 1; col++){
+    for (let col = 0; col < edgeVertices + 1; col++) {
         let prevColStart = getColumnStartIndex(col-1, edgeVertices);
         let colStart = getColumnStartIndex(col, edgeVertices);
         let nextColStart = getColumnStartIndex(col+1, edgeVertices);
-        for (let row = 0; row < edgeVertices + 1 - col; row++){
+        for (let row = 0; row < edgeVertices + 1 - col; row++) {
             indices.push(colStart+row,colStart+row+1, nextColStart+row);
             if (col > 0)
                 indices.push(colStart+row,colStart+row+1, prevColStart+row+1);
@@ -106,7 +106,7 @@ function createLabel(text, position) {
     return label;
 }
 
-function getColumnStartIndex(col, edgeVertices){
+function getColumnStartIndex(col, edgeVertices) {
     return col*(edgeVertices+2) - col*(col-1)/2;
 }
 
@@ -183,7 +183,7 @@ function loadResult() {
     })
 }
 
-function randomLongLat(){ 
+function randomLongLat() { 
     // uniformly random lat long on the surface of unit sphere
     // (eto yung nasa link pero mukhang di gumagana)
     let u = Math.random();
@@ -193,11 +193,11 @@ function randomLongLat(){
     return [long, lat];
 }
 
-function generate_random_points(num_points=100){
+function generate_random_points(num_points=100) {
     // returns array of [long, lat]
     let vertices = [];
     let vec3 = new THREE.Vector3();
-    for (let point_i=0; point_i < num_points; point_i++){
+    for (let point_i=0; point_i < num_points; point_i++) {
         let rll = randomLongLat()
         vertices.push(rll);
     }
@@ -268,7 +268,6 @@ async function init() {
                 }
 
                 // Is a neighbor
-                console.log(i, "thisFace", thisFace, "otherFace", otherFace, "position", position);
                 if (position !== -1) {
                     if (!d_triangles.includes(otherFace)) {
                         thisFaceNeighbors.push(-1);
@@ -295,6 +294,32 @@ async function init() {
     const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
     console.log(meshData);
     console.log("Neighbors:", chosenNeighbors);
+
+    let data = "sph";
+    let vertNeighbors = delaunay.neighbors.map((x) => x);
+    data = data.concat("\n", meshData.vertices.length, " ", meshData.faces.length);
+
+    for (let i = 0; i < meshData.vertices.length + meshData.faces.length; i++) {
+        if (i < meshData.vertices.length) {
+            // There's something wrong here !!!! Positions of vertices are all messed up
+            data = data.concat("\n", meshData.vertices[i][1], " ", meshData.vertices[i][0]);
+            for (let j = 0; j < vertNeighbors[i].length; j++) {
+                data = data.concat(" ", vertNeighbors[i][j]);
+            }
+        }
+        else {
+            data = data.concat("\n", meshData.faces[i - meshData.vertices.length].length);
+            for (let j = 0; j < meshData.faces[i - meshData.vertices.length].length; j++) {
+                data = data.concat(" ");
+                data = data.concat(meshData.faces[i - meshData.vertices.length][j]);
+            }
+            for (let j = 0; j < chosenNeighbors[i - meshData.vertices.length].length; j++) {
+                data = data.concat(" ", chosenNeighbors[i - meshData.vertices.length][j]);
+            }
+        }
+    }
+
+    console.log("Data:", data);
 
     /* Scene */
     // Canvas
@@ -327,6 +352,7 @@ async function init() {
     const particleCount = meshData.vertices.length;
     const particlePositions = new Float32Array(particleCount * 3);
 
+    let origMeshData = meshData.vertices.map((x) => x);
     for (let i = 0; i < particleCount; i++) {
         const lat = meshData.vertices[i][1];
         const long = meshData.vertices[i][0];

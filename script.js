@@ -45,7 +45,7 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
     }
 }
 
-function createSphericalTriangle(points, edgeVertices = 50){
+function createSphericalTriangle(points, edgeVertices = 50) {
     let vectorA = new THREE.Vector3(points[0],points[1],points[2]);
     let vectorB = new THREE.Vector3(points[3],points[4],points[5]);
     let vectorC = new THREE.Vector3(points[6],points[7],points[8]);
@@ -62,8 +62,8 @@ function createSphericalTriangle(points, edgeVertices = 50){
     const currVector = new THREE.Vector3();
     const ghostVector = new THREE.Vector3();
     const currQuat = new THREE.Quaternion();
-    for (let col = 0; col < edgeVertices + 2; col++){
-        for (let row = 0; row < edgeVertices + 2 - col; row++){
+    for (let col = 0; col < edgeVertices + 2; col++) {
+        for (let row = 0; row < edgeVertices + 2 - col; row++) {
             currVector.copy(vectorA);
             currQuat.identity();
 
@@ -79,11 +79,11 @@ function createSphericalTriangle(points, edgeVertices = 50){
     }
 
     // Compute Faces
-    for (let col = 0; col < edgeVertices + 1; col++){
+    for (let col = 0; col < edgeVertices + 1; col++) {
         let prevColStart = getColumnStartIndex(col-1, edgeVertices);
         let colStart = getColumnStartIndex(col, edgeVertices);
         let nextColStart = getColumnStartIndex(col+1, edgeVertices);
-        for (let row = 0; row < edgeVertices + 1 - col; row++){
+        for (let row = 0; row < edgeVertices + 1 - col; row++) {
             indices.push(colStart+row,colStart+row+1, nextColStart+row);
             if (col > 0)
                 indices.push(colStart+row,colStart+row+1, prevColStart+row+1);
@@ -107,7 +107,7 @@ function createLabel(text, position) {
     return label;
 }
 
-function getColumnStartIndex(col, edgeVertices){
+function getColumnStartIndex(col, edgeVertices) {
     return col*(edgeVertices+2) - col*(col-1)/2;
 }
 
@@ -119,7 +119,7 @@ function loadMesh() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
-        fileLoader.load('./mesh files/sphere4.sph', 
+        fileLoader.load('./mesh files/sphere6.sph', 
             function (data) {
                 const lines = data.split('\n');
                 const line1 = lines[1].split(' ');
@@ -200,7 +200,7 @@ async function init() {
     // scene.add(meshInfo);
 
     // Sphere Object
-    const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
+    const geometrySphere = new THREE.SphereGeometry(0.99, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0x008000});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
@@ -219,7 +219,7 @@ async function init() {
 
     for (let i = 0; i < particleCount; i++) {
         const particleLabel = createLabel(`P${i}`, meshData.vertices[i]);
-        scene.add(particleLabel);
+        //scene.add(particleLabel);
 
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
@@ -233,7 +233,7 @@ async function init() {
     particleMaterial.sizeAttenuation = true;
     particleMaterial.wireframe = false;
     const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
+    //scene.add(particles);
 
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
@@ -272,7 +272,7 @@ async function init() {
             }
 
             const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
-            scene.add(line[0]);
+            //scene.add(line[0]);
         }
     }
     
