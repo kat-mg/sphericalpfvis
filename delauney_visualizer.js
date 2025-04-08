@@ -236,55 +236,65 @@ async function init() {
     console.log(delaunay);
     const d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
 
+    // d_triangles, reverse the order of the points in each triangle to make it counter-clockwise
+    for (let i = 0; i < d_triangles.length; i++) {
+        d_triangles[i] = d_triangles[i].reverse();
+    }
+
     // Neighbors ni faces (O(n^4) very not optimal)
     let chosenNeighbors = [];
     for (let i = 0; i < d_triangles.length; i++) {
-        let thisFaceNeghbors = [];
-        let edgesXHasNeighbors = [false, false, false];
-        for (let j = 0; j < d_triangles.length; j++) {
-            if (i != j) {
-                // Get d_triangles[i]'s edges
-                let edgesI = [
-                    [d_triangles[i][0], d_triangles[i][1]],
-                    [d_triangles[i][1], d_triangles[i][2]],
-                    [d_triangles[i][2], d_triangles[i][0]]
-                ];
-                
-                // Get d_triangles[j]'s edges
-                let edgesJ = [
-                    [d_triangles[j][0], d_triangles[j][1]],
-                    [d_triangles[j][1], d_triangles[j][2]],
-                    [d_triangles[j][2], d_triangles[j][0]]
-                ];
-                let sharedEdge = false;
+        let thisFaceNeighbors = [];
+        let positions = [];
+        for (let j = 0; j < delaunay.triangles.length; j++) {
+            let thisFace = d_triangles[i];
+            let otherFace = delaunay.triangles[j];
+            if (thisFace !== otherFace) {
 
-                for (let k = 0; k < edgesI.length; k++) {
-                    if (sharedEdge) {
-                        break;
-                    }
-                    for (let l = 0; l < edgesJ.length; l++) {
-                        if ((edgesI[k][0] == edgesJ[l][0] && edgesI[k][1] == edgesJ[l][1]) ||
-                            (edgesI[k][0] == edgesJ[l][1] && edgesI[k][1] == edgesJ[l][0])) {
-                            console.log("found shared edge", edgesI[k], edgesJ[l]);
-                            sharedEdge = true;
-                            edgesXHasNeighbors[k] = true;
+                // Order to push the index of the triangle in d_triangles: edge 0,2 or 2,0 then edge 1,0 or 0,1 then edge 1,2 or 2,1
+                let thisFaceEdges = [[thisFace[0], thisFace[2]], [thisFace[1], thisFace[0]], [thisFace[1], thisFace[2]]];
+                let otherFaceEdges = [[otherFace[0], otherFace[2]], [otherFace[1], otherFace[0]], [otherFace[1], otherFace[2]]];
+
+                /* Brute Force */
+                let position = -1;
+                for (let k = 0; k < 3; k++) {
+                    for (let l = 0; l < 3; l++) {
+                        if (thisFaceEdges[k][0] === otherFaceEdges[l][0] && thisFaceEdges[k][1] === otherFaceEdges[l][1] || 
+                            thisFaceEdges[k][0] === otherFaceEdges[l][1] && thisFaceEdges[k][1] === otherFaceEdges[l][0]) {
+                            position = k;
                             break;
                         }
                     }
                 }
 
-                if (sharedEdge) {
-                    thisFaceNeghbors.push(j);
-                } 
+                // Is a neighbor
+                console.log(i, "thisFace", thisFace, "otherFace", otherFace, "position", position);
+                if (position !== -1) {
+                    if (!d_triangles.includes(otherFace)) {
+                        thisFaceNeighbors.push(-1);
+                        positions.push(position);
+                        continue;
+                    } // Shares a face with an obstacle
 
+                    // Map the delauny.triangles index to the d_triangles index
+                    let mappedIndex = d_triangles.indexOf(otherFace);
+                    thisFaceNeighbors.push(mappedIndex);
+                    positions.push(position);
+                }
             }
         }
-        chosenNeighbors.push(thisFaceNeghbors);
+        // fix the order of the neighbors to match the order in positions
+        let orderedNeighbors = JSON.parse(JSON.stringify(thisFaceNeighbors));
+        for (let k = 0; k < positions.length; k++) {
+            orderedNeighbors[positions[k]] = thisFaceNeighbors[k];
+        }
+        thisFaceNeighbors = JSON.parse(JSON.stringify(orderedNeighbors));
+        chosenNeighbors.push(thisFaceNeighbors);
     }
 
     const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
     console.log(meshData);
-    console.log(chosenNeighbors);
+    console.log("Neighbors:", chosenNeighbors);
 
     /* Scene */
     // Canvas
@@ -384,20 +394,20 @@ async function init() {
     }
     
     // Results
-    const resultData = await loadResult();
-    for (let i = 0; i < resultData.length; i++) {
+    // const resultData = await loadResult();
+    // for (let i = 0; i < resultData.length; i++) {
 
-        const pointSphereGeom = new THREE.SphereGeometry(0.02, 32, 32);
-        const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
-        const pointSphere = new THREE.Mesh(pointSphereGeom, pointSphereMat);
-        pointSphere.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
-        scene.add(pointSphere);
+    //     const pointSphereGeom = new THREE.SphereGeometry(0.02, 32, 32);
+    //     const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
+    //     const pointSphere = new THREE.Mesh(pointSphereGeom, pointSphereMat);
+    //     pointSphere.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
+    //     scene.add(pointSphere);
         
-        if (i !== resultData.length - 1) {
-            const line = createSphericalCurve(resultData[i], resultData[i + 1], 1, 0xbae1ff);
-            scene.add(line[0]);
-        }
-    }
+    //     if (i !== resultData.length - 1) {
+    //         const line = createSphericalCurve(resultData[i], resultData[i + 1], 1, 0xbae1ff);
+    //         scene.add(line[0]);
+    //     }
+    // }
 
     /* Sizes */
     const sizes = {
