@@ -110,14 +110,6 @@ function getColumnStartIndex(col, edgeVertices) {
     return col*(edgeVertices+2) - col*(col-1)/2;
 }
 
-function gaussianRandom(mean=0, stdev=1) {
-    const u = 1 - Math.random(); // Converting [0,1) to (0,1]
-    const v = Math.random();
-    const z = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
-    // Transform to the desired mean and standard deviation:
-    return z * stdev + mean;
-}
-
 /* Data */
 THREE.Cache.enabled = true;
 const fileLoader = new THREE.FileLoader();
@@ -229,6 +221,58 @@ function remove_triangles(triangles, percent) {
     return triangles;
 }
 
+function findPolyNeighbors(triangle, validTriangles, allTriangles) {
+    let thisRefNeighbors = [];
+    let thisFaceNeighbors = [];
+    let positions = [];
+    for (let i = 0; i < allTriangles.length; i++) {
+        let otherFace = allTriangles[i];
+        if (triangle !== otherFace) {
+            let thisFaceEdges = [[triangle[0], triangle[2]], [triangle[1], triangle[0]], [triangle[1], triangle[2]]];
+            let otherFaceEdges = [[otherFace[0], otherFace[2]], [otherFace[1], otherFace[0]], [otherFace[1], otherFace[2]]];
+
+            /* Brute Force */
+            let position = -1;
+            for (let k = 0; k < 3; k++) {
+                for (let l = 0; l < 3; l++) {
+                    if (thisFaceEdges[k][0] === otherFaceEdges[l][0] && thisFaceEdges[k][1] === otherFaceEdges[l][1] || 
+                        thisFaceEdges[k][0] === otherFaceEdges[l][1] && thisFaceEdges[k][1] === otherFaceEdges[l][0]) {
+                        position = k;
+                        break;
+                    }
+                }
+            }
+
+            // Is a neighbor
+            if (position !== -1) {
+                if (!validTriangles.includes(otherFace)) {
+                    thisRefNeighbors.push([-1, i]);
+                    thisFaceNeighbors.push(-1);
+                    positions.push(position);
+                    continue;
+                } // Shares a face with an obstacle
+
+                // Map the delauny.triangles index to the d_triangles index
+                let mappedIndex = validTriangles.indexOf(otherFace);
+                thisRefNeighbors.push([mappedIndex, i]);
+                thisFaceNeighbors.push(mappedIndex);
+                positions.push(position);
+            }
+        }
+    }
+
+    let orderedNeighbors = JSON.parse(JSON.stringify(thisFaceNeighbors));
+    let orderedRefNeighbors = thisRefNeighbors.map((x) => x);
+    for (let k = 0; k < positions.length; k++) {
+        orderedNeighbors[positions[k]] = thisFaceNeighbors[k];
+        orderedRefNeighbors[positions[k]] = thisRefNeighbors[k];
+    }
+
+    thisFaceNeighbors = JSON.parse(JSON.stringify(orderedNeighbors));
+
+    return [thisFaceNeighbors, orderedRefNeighbors];
+}
+
 async function init() {
     //const meshData = await loadMesh();
     const random_points = generate_random_points(10);
@@ -245,90 +289,12 @@ async function init() {
     let referenceNeighbors = [];
     let chosenNeighbors = [];
     for (let i = 0; i < d_triangles.length; i++) {
-        let thisFaceNeighbors = [];
-        let thisRefNeighbors = [];
-        let positions = [];
-        for (let j = 0; j < delaunay.triangles.length; j++) {
-            let thisFace = d_triangles[i];
-            let otherFace = delaunay.triangles[j];
-            if (thisFace !== otherFace) {
-
-                // Order to push the index of the triangle in d_triangles: edge 0,2 or 2,0 then edge 1,0 or 0,1 then edge 1,2 or 2,1
-                let thisFaceEdges = [[thisFace[0], thisFace[2]], [thisFace[1], thisFace[0]], [thisFace[1], thisFace[2]]];
-                let otherFaceEdges = [[otherFace[0], otherFace[2]], [otherFace[1], otherFace[0]], [otherFace[1], otherFace[2]]];
-
-                /* Brute Force */
-                let position = -1;
-                for (let k = 0; k < 3; k++) {
-                    for (let l = 0; l < 3; l++) {
-                        if (thisFaceEdges[k][0] === otherFaceEdges[l][0] && thisFaceEdges[k][1] === otherFaceEdges[l][1] || 
-                            thisFaceEdges[k][0] === otherFaceEdges[l][1] && thisFaceEdges[k][1] === otherFaceEdges[l][0]) {
-                            position = k;
-                            break;
-                        }
-                    }
-                }
-
-                // Is a neighbor
-                if (position !== -1) {
-                    if (!d_triangles.includes(otherFace)) {
-                        thisRefNeighbors.push([-1, j]);
-                        thisFaceNeighbors.push(-1);
-                        positions.push(position);
-                        continue;
-                    } // Shares a face with an obstacle
-
-                    // Map the delauny.triangles index to the d_triangles index
-                    let mappedIndex = d_triangles.indexOf(otherFace);
-                    thisRefNeighbors.push([mappedIndex, j]);
-                    thisFaceNeighbors.push(mappedIndex);
-                    positions.push(position);
-                }
-            }
-        }
-        // fix the order of the neighbors to match the order in positions
-        let orderedNeighbors = JSON.parse(JSON.stringify(thisFaceNeighbors));
-        let orderedRefNeighbors = thisRefNeighbors.map((x) => x);
-        for (let k = 0; k < positions.length; k++) {
-            orderedNeighbors[positions[k]] = thisFaceNeighbors[k];
-            orderedRefNeighbors[positions[k]] = thisRefNeighbors[k];
-        }
-
-        thisFaceNeighbors = JSON.parse(JSON.stringify(orderedNeighbors));
-        chosenNeighbors.push(thisFaceNeighbors);
-        referenceNeighbors.push(orderedRefNeighbors);
+        let thisTriangleData = findPolyNeighbors(d_triangles[i], d_triangles, delaunay.triangles);
+        chosenNeighbors.push(thisTriangleData[0]);
+        referenceNeighbors.push(thisTriangleData[1]);
     }
 
-    // FOR DEBUGGING
-    // console.log("Reference Neighbors length and contents:", referenceNeighbors.length, referenceNeighbors);
-    // console.log("Chosen Neighbors length and contents:", chosenNeighbors.length, chosenNeighbors);
-    // for (let i = 0; i < chosenNeighbors.length; i++) {
-    //     if (chosenNeighbors[i].length !== referenceNeighbors[i].length) {
-    //         console.log("Error: chosenNeighbors length does not match d_triangles length at index", i);
-    //     }
-    //     for (let j = 0; j < chosenNeighbors[i].length; j++) {
-    //         if (chosenNeighbors[i][j] !== -1) {
-    //             if (delaunay.triangles[referenceNeighbors[i][j][1]] === d_triangles[chosenNeighbors[i][j]]) {
-    //                 console.log("match", referenceNeighbors[i][j][1], chosenNeighbors[i][j], delaunay.triangles[referenceNeighbors[i][j][1]], d_triangles[chosenNeighbors[i][j]]);
-    //             }
-    //             else {
-    //                 console.log("Error: chosenNeighbors does not match delaunay.triangles at index", i, j);
-    //             }
-    //         }
-    //         if (chosenNeighbors[i][j] === -1) {
-    //             if (!d_triangles.includes(delaunay.triangles[referenceNeighbors[i][j][1]])) {
-    //                 console.log("match", referenceNeighbors[i][j][1], chosenNeighbors[i][j], delaunay.triangles[referenceNeighbors[i][j][1]]);
-    //             }
-    //             else {
-    //                 console.log("Error: chosenNeighbors does not match delaunay.triangles at index", i, j);
-    //             }
-    //         }
-    //     }
-    // }
-    // console.log("End of error testing");
-    // END DEBUGGING
-
-    // Neighbors ni vertices
+    // Neighbors ni vertices (also O(n^4) very not optimal)
     console.log("Vertices length and contents:", random_points.length, random_points);
     console.log("Triangles length and contents:", d_triangles.length, d_triangles);
     console.log("Chosen Neighbors length and contents:", chosenNeighbors.length, chosenNeighbors);
@@ -340,6 +306,13 @@ async function init() {
         let validNeighbor = -2;
 
         for (let j = 0; j < d_triangles.length; j++) {
+            let tempTriangle = d_triangles[j].map((x) => x);
+            if (tempTriangle.includes(i)) {
+                while (tempTriangle[0] !== i) {
+                    tempTriangle.push(tempTriangle.shift()); // rotate the triangle so that the vertex is at the front
+                }
+                console.log("Triangle", j, "with points", d_triangles[j], "became", tempTriangle); // FOR DEBUGGING
+            }
             for (let k = 0; k < d_triangles[j].length; k++) {
                 // console.log("Checking vertex", d_triangles[j][k], "for vertex", i, "with points", d_triangles[j]); // FOR DEBUGGING
                 if (d_triangles[j][k] === i) {
@@ -382,7 +355,13 @@ async function init() {
         else {
             console.log("Vertex", i, "is valid with neighbors (so far)", thisVertNeighbors);
             if (validNeighbor !== -2) {
-
+                for (let j = 0; j < delaunay.triangles.length; j++) {
+                    for (let k = 0; k < delaunay.triangles[j].length; k++) {
+                        if (delaunay.triangles[j][k] === validNeighbor) {
+                            break;  // start checking for the neighbors of this valid triangle's neighbor
+                        }
+                    }
+                } // Go through all the triangles to find the neighbors of currTriangle that has random_points[i] as a vertex
             }
             else {
                 console.log("how tf");
