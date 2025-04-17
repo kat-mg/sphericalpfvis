@@ -222,6 +222,7 @@ function remove_triangles(triangles, percent) {
 }
 
 function findPolyNeighbors(triangle, validTriangles, allTriangles) {
+    console.log("Triangle", triangle); // FOR DEBUGGING
     let thisRefNeighbors = [];
     let thisFaceNeighbors = [];
     let positions = [];
@@ -243,7 +244,6 @@ function findPolyNeighbors(triangle, validTriangles, allTriangles) {
                 }
             }
 
-            // Is a neighbor
             if (position !== -1) {
                 if (!validTriangles.includes(otherFace)) {
                     thisRefNeighbors.push([-1, i]);
@@ -257,7 +257,7 @@ function findPolyNeighbors(triangle, validTriangles, allTriangles) {
                 thisRefNeighbors.push([mappedIndex, i]);
                 thisFaceNeighbors.push(mappedIndex);
                 positions.push(position);
-            }
+            } // Is a neighbor
         }
     }
 
@@ -269,22 +269,28 @@ function findPolyNeighbors(triangle, validTriangles, allTriangles) {
     }
 
     thisFaceNeighbors = JSON.parse(JSON.stringify(orderedNeighbors));
+    thisRefNeighbors = JSON.parse(JSON.stringify(orderedRefNeighbors));
+    let thisTriangleCopy = JSON.parse(JSON.stringify(triangle));
 
-    return [thisFaceNeighbors, orderedRefNeighbors];
+    console.log("thisFaceNeighbors", thisFaceNeighbors, "thisRefNeighbors", thisRefNeighbors); // FOR DEBUGGING
+
+    return [thisFaceNeighbors, thisRefNeighbors, thisTriangleCopy];
 }
 
 async function init() {
     //const meshData = await loadMesh();
     const random_points = generate_random_points(10);
+
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
     console.log(delaunay);
-    const d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
+    let d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
 
     // d_triangles, reverse the order of the points in each triangle to make it counter-clockwise
     for (let i = 0; i < d_triangles.length; i++) {
         d_triangles[i] = d_triangles[i].reverse();
     }
 
+    let triangles = [];
     // Neighbors ni faces (O(n^4) very not optimal)
     let referenceNeighbors = [];
     let chosenNeighbors = [];
@@ -292,6 +298,7 @@ async function init() {
         let thisTriangleData = findPolyNeighbors(d_triangles[i], d_triangles, delaunay.triangles);
         chosenNeighbors.push(thisTriangleData[0]);
         referenceNeighbors.push(thisTriangleData[1]);
+        triangles.push(thisTriangleData[2]);
     }
 
     // Neighbors ni vertices (also O(n^4) very not optimal)
@@ -299,6 +306,8 @@ async function init() {
     console.log("Triangles length and contents:", d_triangles.length, d_triangles);
     console.log("Chosen Neighbors length and contents:", chosenNeighbors.length, chosenNeighbors);
     console.log("Reference Neighbors length and contents:", referenceNeighbors.length, referenceNeighbors);
+
+    // CONTINUE TO DO TOMORROW !!
     let vertNeighborsOrdered = [];
     for (let i = 0; i < random_points.length; i++) {
         let thisVertNeighbors = [];
@@ -306,70 +315,50 @@ async function init() {
         let validNeighbor = -2;
 
         for (let j = 0; j < d_triangles.length; j++) {
-            let tempTriangle = d_triangles[j].map((x) => x);
-            if (tempTriangle.includes(i)) {
-                while (tempTriangle[0] !== i) {
-                    tempTriangle.push(tempTriangle.shift()); // rotate the triangle so that the vertex is at the front
-                }
-                console.log("Triangle", j, "with points", d_triangles[j], "became", tempTriangle); // FOR DEBUGGING
-            }
-            for (let k = 0; k < d_triangles[j].length; k++) {
-                // console.log("Checking vertex", d_triangles[j][k], "for vertex", i, "with points", d_triangles[j]); // FOR DEBUGGING
-                if (d_triangles[j][k] === i) {
-                    console.log("Found vertex", i, "in triangle", j, "with points", d_triangles[j]);
-                    vertexValid = true;
-                    thisVertNeighbors.push(j); // add it to thisVertNeighbors
+            if (d_triangles[j].includes(i)) {
+                // Required Setup (to ensure counterclockwise)
+                while (d_triangles[j][0] !== i) {
+                    d_triangles[j].unshift(d_triangles[j].pop()); // rotate the triangle so that the vertex is at the front
+                } // Ensure that the vertex is at the front of the triangle
+                console.log("Found vertex", i, "in triangle", j, "with points", d_triangles[j]); // FOR DEBUGGING
 
-                    // Find the neighbor of this triangle that also has this vertex (vertex NOT edge is what's needed here)
-                    for (let m = 0; m < chosenNeighbors[j].length; m++) {
-                        if (chosenNeighbors[j][m] !== -1) {
-                            let otherFace = d_triangles[chosenNeighbors[j][m]];
-                            if (otherFace.includes(i)) {
-                                validNeighbor = referenceNeighbors[j][m][1];  // validNeighbor stores the ORIGINAL index of the triangle in delaunay.triangles
-                                thisVertNeighbors.push(referenceNeighbors[j][m][0]); // thisVertNeighbors stores the index of the triangle in d_triangles
-                                console.log("referenceNeighbors", referenceNeighbors[j][m]);
-                                break;
-                            } // found a neighbor that has random_points[i] as a vertex
-                        }
-                        if (chosenNeighbors[j][m] === -1) {
-                            let otherFace = delaunay.triangles[referenceNeighbors[j][m][1]];
-                            if (otherFace.includes(i)) {
-                                validNeighbor = referenceNeighbors[j][m][1];
-                                thisVertNeighbors.push(referenceNeighbors[j][m][0]);
-                                console.log("referenceNeighbors", referenceNeighbors[j][m]);
-                                break;
-                            }
+                let thisTriangleData = findPolyNeighbors(d_triangles[j], d_triangles, delaunay.triangles); // get the counterclockwise neighbors of this triangle order
+                let thisTriangleNeighbors = thisTriangleData[0]; // get the neighbors of this triangle acc to d_triangless
+                let thisTriangleRefNeighbors = thisTriangleData[1]; // get the reference neighbors of this triangle will be [d_triangless index, delaunay.triangles index]
+                
+                vertexValid = true; // vertex is valid
+                thisVertNeighbors.push(j); // add the triangle to the list of neighbors
+
+                for (let k = 0; k < thisTriangleNeighbors.length; k++) {
+                    if (thisTriangleNeighbors[k] !== -1) {
+                        let otherFace = d_triangles[thisTriangleNeighbors[k]]; // get the other face of this triangle
+                        if (otherFace.includes(i)) {
+                            validNeighbor = thisTriangleRefNeighbors[k][1]; // validNeighbor stores the ORIGINAL index of the triangle in delaunay.triangles
+                            thisVertNeighbors.push(thisTriangleNeighbors[k]); // thisVertNeighbors stores the index of the triangle in d_triangless
+                            console.log("referenceNeighbors", thisTriangleRefNeighbors[k]);
+                            break;
                         }
                     }
-                    break;  // start checking for the neighbors of this valid triangle's neighbor
-                } // Found the vertex in the triangle
-            } // Go through each vertex of the triangle to check if it is random_points[i]
+                    if (thisTriangleNeighbors[k] === -1) {
+                        let otherFace = delaunay.triangles[thisTriangleRefNeighbors[k][1]];
+                        if (otherFace.includes(i)) {
+                            validNeighbor = thisTriangleRefNeighbors[k][1]; // validNeighbor stores the ORIGINAL index of the triangle in delaunay.triangles
+                            thisVertNeighbors.push(thisTriangleRefNeighbors[k][0]); // thisVertNeighbors stores the index of the triangle in d_triangless
+                            console.log("referenceNeighbors", thisTriangleRefNeighbors[k]);
+                            break;
+                        }
+                    }
+                } // Find the neighbot of this triangle that also has this vertex
+            }
+
             if (vertexValid) {
                 break;  // stop checking the triangles if we found the vertex in this triangle
             }
         } // Go through all the valid triangles to look for one that has random_points[i] as a vertex
 
-        if (!vertexValid) {
-            random_points.splice(i, 1);
-        } // vertex is not valid, remove it from random_points
-        else {
-            console.log("Vertex", i, "is valid with neighbors (so far)", thisVertNeighbors);
-            if (validNeighbor !== -2) {
-                for (let j = 0; j < delaunay.triangles.length; j++) {
-                    for (let k = 0; k < delaunay.triangles[j].length; k++) {
-                        if (delaunay.triangles[j][k] === validNeighbor) {
-                            break;  // start checking for the neighbors of this valid triangle's neighbor
-                        }
-                    }
-                } // Go through all the triangles to find the neighbors of currTriangle that has random_points[i] as a vertex
-            }
-            else {
-                console.log("how tf");
-            }
-        } // vertex is valid, find the neighbors of validNeighbor that has random_points[i] as a vertex and add them to thisVertNeighbors
     } // Go through all the vertices and find their neighbors
 
-    const meshData = {vertices:random_points, faces:d_triangles}; // set vertices and faces
+    const meshData = {vertices:random_points, faces:triangles}; // set vertices and faces
     console.log("Mesh Data:", meshData);
     console.log("Neighbors:", chosenNeighbors);
 
@@ -420,7 +409,7 @@ async function init() {
     // scene.add(meshInfo);
 
     // Sphere Object
-    const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
+    const geometrySphere = new THREE.SphereGeometry(0.96, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0x008000});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
