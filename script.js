@@ -200,7 +200,7 @@ async function init() {
     // scene.add(meshInfo);
 
     // Sphere Object
-    const geometrySphere = new THREE.SphereGeometry(0.98, 32, 32);
+    const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0x008000});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);

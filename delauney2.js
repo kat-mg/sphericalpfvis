@@ -12,7 +12,7 @@ function randomLongLat() {
     return [long, lat];
 }
 
-function generate_random_points(num_points=100) {
+function generateRandomPoints(num_points=100) {
     // returns array of [long, lat]
     let vertices = [];
     for (let point_i=0; point_i < num_points; point_i++) {
@@ -38,16 +38,14 @@ function shuffle(array) {
     }
 }
 
-function remove_triangles(triangles, percent) {
-    console.log("og length ", triangles.length);
+function removeTriangles(triangles, percent) {
     shuffle(triangles);
     triangles = triangles.slice(Math.floor(triangles.length * (percent)));
-    console.log("new length ", triangles.length);
     return triangles;
 }
 
 function findPolyNeighbors(triangle, validTriangles, allTriangles) {
-    //console.log("Triangle", triangle); // FOR DEBUGGING
+
     let thisRefNeighbors = [];
     let thisFaceNeighbors = [];
     let positions = [];
@@ -97,13 +95,10 @@ function findPolyNeighbors(triangle, validTriangles, allTriangles) {
     thisRefNeighbors = JSON.parse(JSON.stringify(orderedRefNeighbors));
     let thisTriangleCopy = JSON.parse(JSON.stringify(triangle));
 
-    //console.log("thisFaceNeighbors", thisFaceNeighbors, "thisRefNeighbors", thisRefNeighbors); // FOR DEBUGGING
-
     return [thisFaceNeighbors, thisRefNeighbors, thisTriangleCopy];
 }
 
 function findNextTriangle(vertex, triangle, allTriangles, alreadyNeighbors) {
-    //console.log("Vertex", vertex, "Triangle", triangle, "Neighbors", alreadyNeighbors); // FOR DEBUGGING
     let triangleEdges = [[triangle[0], triangle[2]], [triangle[1], triangle[0]], [triangle[1], triangle[2]]];
     for (let i = 0; i < allTriangles.length; i++) {
         if (allTriangles[i] === triangle || alreadyNeighbors.includes(i)) {
@@ -133,17 +128,14 @@ function findNextTriangle(vertex, triangle, allTriangles, alreadyNeighbors) {
 }
 
 function init() {
-    const random_points = generate_random_points(10);
+    const random_points = generateRandomPoints(10);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
-    let d_triangles = remove_triangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
-
-    console.log("Delaunay triangles:", delaunay.triangles); // FOR DEBUGGING
+    let d_triangles = removeTriangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
 
     // d_triangles, reverse the order of the points in each triangle to make it counter-clockwise
     for (let i = 0; i < d_triangles.length; i++) {
         d_triangles[i] = d_triangles[i].reverse();
     }
-    console.log("d_triangles length and contents:", d_triangles.length, d_triangles); // FOR DEBUGGING
 
     let triangles = [];
     // Neighbors ni faces (O(n^3) very not optimal)
@@ -155,8 +147,6 @@ function init() {
         referenceNeighbors.push(thisTriangleData[1]);
         triangles.push(thisTriangleData[2]);
     }
-
-    console.log("Reference Neighbors length and contents:", referenceNeighbors.length, referenceNeighbors); // FOR DEBUGGING
 
     // Neighbors ni vertices (also O(n^4) very not optimal)
     let vertNeighborsOrdered = [];
@@ -205,59 +195,42 @@ function init() {
         } // Go through all the valid triangles to look for one that has random_points[i] as a vertex (oks na part na ito)
 
         if (!vertexValid) {
-            console.log("Vertex", i, "is not valid"); // FOR DEBUGGING
             random_points = random_points.filter(item => item !== random_points[i]); // remove the vertex from the list of vertices
-            console.log("random_points", random_points); // FOR DEBUGGING
             continue; // skip this vertex if it is not valid
         }
         else {
             let currentTriangle = validNeighbor;
-            console.log("Vertex", i, "is valid with neighbors", thisVertNeighbors, "current triangle is: ", currentTriangle); // FOR DEBUGGING
             // TO DO (Find the neighbor of validNeighbor with the same vertex as this vertex at all triangles)
             while (currentTriangle !== -2) {
-                //console.log("Current triangle", currentTriangle, "Neighbors", thisVertNeighbors); // FOR DEBUGGING
                 currentTriangle = findNextTriangle(i, delaunay.triangles[currentTriangle], delaunay.triangles, thisVertNeighbors); // find the next triangle that shares an edge with this triangle
                 if (currentTriangle !== -2) {
                     // Current triangle returns the index of the triangle based on the delaunay.triangles index
                     thisVertNeighbors.push(currentTriangle); // add the triangle to the list of neighbors
-                    //console.log("Next triangle", currentTriangle, "Neighbors", thisVertNeighbors); // FOR DEBUGGING
                 }
             } // Finish all the neighbor polygons (has index in delaunay.triangles)
-            console.log("Delauney index of vertex neighbors length and contents", thisVertNeighbors.length, thisVertNeighbors); // FOR DEBUGGING
 
             // Convert the vertex neighbors to the index of the triangles in d_triangles
             thisVertNeighbors = thisVertNeighbors.map((x) => d_triangles.indexOf(delaunay.triangles[x]));
-            console.log("d_triangles index of vertex neighbors length and contents", thisVertNeighbors.length, thisVertNeighbors); // FOR DEBUGGING
 
-            for (let j = 1; j < thisVertNeighbors.length; j++) {
-                let prevNeighbor = thisVertNeighbors[j - 1];
-                let currNeighbor = thisVertNeighbors[j];
-                if (prevNeighbor === -1 && currNeighbor === -1) {
-                    thisVertNeighbors.splice(j, 1); // remove the current neighbor if it is -1
-                }
-            } // Remove consecutive -1s from the list of neighbors
-            console.log("Final vertex neighbors length and contents", thisVertNeighbors.length, thisVertNeighbors); // FOR DEBUGGING
-            console.log("\n");
+            // Remove consecutive -1s from the list of neighbors
+            thisVertNeighbors = thisVertNeighbors.filter(function(item, pos, arr){
+                return pos === 0 || item !== arr[pos-1];});
         }
-
+        vertNeighborsOrdered.push(thisVertNeighbors); // add the vertex neighbors to the list of vertex neighbors
     } // Go through all the vertices and find their neighbors
 
-    console.log("d_triangles length and contents:", d_triangles.length, d_triangles); // FOR DEBUGGING
-    console.log("allTriangles length and contents:", delaunay.triangles.length, delaunay.triangles); // FOR DEBUGGING
-
     const meshData = {vertices:random_points, faces:triangles}; // set vertices and faces
-    console.log("Mesh Data:", meshData);
 
     let data = "sph";
-    let vertNeighbors = delaunay.neighbors.map((x) => x);
+    //let vertNeighbors = delaunay.neighbors.map((x) => x);
     data = data.concat("\n", meshData.vertices.length, " ", meshData.faces.length);
 
     for (let i = 0; i < meshData.vertices.length + meshData.faces.length; i++) {
         if (i < meshData.vertices.length) {
             // There's something wrong here !!!! Positions of vertices are all messed up
-            data = data.concat("\n", meshData.vertices[i][1], " ", meshData.vertices[i][0]);
-            for (let j = 0; j < vertNeighbors[i].length; j++) {
-                data = data.concat(" ", vertNeighbors[i][j]);
+            data = data.concat("\n", meshData.vertices[i][1], " ", meshData.vertices[i][0], " ", vertNeighborsOrdered[i].length);
+            for (let j = 0; j < vertNeighborsOrdered[i].length; j++) {
+                data = data.concat(" ", vertNeighborsOrdered[i][j]);
             }
         }
         else {
@@ -272,7 +245,7 @@ function init() {
         }
     }
 
-    console.log("Data:", data);
+    console.log(data);
 }
 
 init();
