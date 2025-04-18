@@ -45,7 +45,6 @@ function removeTriangles(triangles, percent) {
 }
 
 function findPolyNeighbors(triangle, validTriangles, allTriangles) {
-
     let thisRefNeighbors = [];
     let thisFaceNeighbors = [];
     let positions = [];
@@ -128,7 +127,7 @@ function findNextTriangle(vertex, triangle, allTriangles, alreadyNeighbors) {
 }
 
 function init() {
-    const random_points = generateRandomPoints(10);
+    const random_points = generateRandomPoints(1000);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
     let d_triangles = removeTriangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
 
@@ -150,6 +149,7 @@ function init() {
 
     // Neighbors ni vertices (also O(n^4) very not optimal)
     let vertNeighborsOrdered = [];
+    let invalidVertices = [];
     for (let i = 0; i < random_points.length; i++) {
         let thisVertNeighbors = [];
         let vertexValid = false;
@@ -195,12 +195,12 @@ function init() {
         } // Go through all the valid triangles to look for one that has random_points[i] as a vertex (oks na part na ito)
 
         if (!vertexValid) {
-            random_points = random_points.filter(item => item !== random_points[i]); // remove the vertex from the list of vertices
+            invalidVertices.push(i); // add the vertex to the list of invalid vertices
+            vertNeighborsOrdered.push([-2]); // add -2 to the list of neighbors to indicate that this vertex is invalid
             continue; // skip this vertex if it is not valid
         }
         else {
             let currentTriangle = validNeighbor;
-            // TO DO (Find the neighbor of validNeighbor with the same vertex as this vertex at all triangles)
             while (currentTriangle !== -2) {
                 currentTriangle = findNextTriangle(i, delaunay.triangles[currentTriangle], delaunay.triangles, thisVertNeighbors); // find the next triangle that shares an edge with this triangle
                 if (currentTriangle !== -2) {
@@ -227,7 +227,6 @@ function init() {
 
     for (let i = 0; i < meshData.vertices.length + meshData.faces.length; i++) {
         if (i < meshData.vertices.length) {
-            // There's something wrong here !!!! Positions of vertices are all messed up
             data = data.concat("\n", meshData.vertices[i][1], " ", meshData.vertices[i][0], " ", vertNeighborsOrdered[i].length);
             for (let j = 0; j < vertNeighborsOrdered[i].length; j++) {
                 data = data.concat(" ", vertNeighborsOrdered[i][j]);
