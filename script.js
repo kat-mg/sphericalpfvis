@@ -154,7 +154,7 @@ function loadResult() {
     return new Promise((resolve, reject) => {
         let resultData = [];
 
-        fileLoader.load('./result files/sphere1res.txt',
+        fileLoader.load('./result files/sphere7res.txt',
             function (data) {
                 const lines = data.split('\n');
                 for (let i = 0; i < lines.length; i++) {
@@ -186,19 +186,6 @@ async function init() {
     // Scene
     const scene = new THREE.Scene();
 
-    // Mesh Info
-    // const meshDataString = JSON.stringify(meshData, null, 2); 
-    // const meshDiv = document.createElement('div');
-    // meshDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    // meshDiv.className = 'meshInfo';
-    // meshDiv.textContent = meshDataString;
-    // meshDiv.style.position = 'static';
-    // meshDiv.style.color = 'white';
-    // const meshInfo = new CSS2DObject(meshDiv);
-    // meshInfo.position.set(0, 2, 0);
-    // meshInfo.scale.set(0.1, 0.1, 0.1);
-    // scene.add(meshInfo);
-
     // Sphere Object
     const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0x008000});
@@ -210,6 +197,8 @@ async function init() {
     const particleCount = meshData.vertices.length;
     const particlePositions = new Float32Array(particleCount * 3);
 
+    const origMeshData = JSON.parse(JSON.stringify(meshData)); // deep copy of meshData
+
     for (let i = 0; i < particleCount; i++) {
         const lat = meshData.vertices[i][0];
         const long = meshData.vertices[i][1];
@@ -219,7 +208,7 @@ async function init() {
 
     for (let i = 0; i < particleCount; i++) {
         const particleLabel = createLabel(`P${i}`, meshData.vertices[i]);
-        scene.add(particleLabel);
+        //scene.add(particleLabel);
 
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
@@ -233,7 +222,7 @@ async function init() {
     particleMaterial.sizeAttenuation = true;
     particleMaterial.wireframe = false;
     const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
+    //scene.add(particles);
 
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
@@ -272,7 +261,7 @@ async function init() {
             }
 
             const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
-            scene.add(line[0]);
+            //scene.add(line[0]);
         }
     }
     
@@ -284,11 +273,11 @@ async function init() {
         const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
         const pointSphere = new THREE.Mesh(pointSphereGeom, pointSphereMat);
         pointSphere.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
-        //scene.add(pointSphere);
+        scene.add(pointSphere);
         
         if (i !== resultData.length - 1) {
             const line = createSphericalCurve(resultData[i], resultData[i + 1], 1, 0xbae1ff);
-            //scene.add(line[0]);
+            scene.add(line[0]);
         }
     }
 

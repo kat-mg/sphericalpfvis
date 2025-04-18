@@ -4,11 +4,14 @@ const toDegrees = (radians) => radians / Math.PI * 180;
 
 function randomLongLat() { 
     // uniformly random lat long on the surface of unit sphere
-    // (eto yung nasa link pero mukhang di gumagana)
     let u = Math.random();
     let v = Math.random();
-    var lat = toDegrees(Math.acos(2*v-1))-90;
-    var long = 360*u-180;
+    let lat = toDegrees(Math.acos(2*v-1))-90;
+    let long = 360*u-180;
+
+    // Fix to 5 decimal places
+    lat = Math.round(lat * 100000) / 100000;
+    long = Math.round(long * 100000) / 100000;
     return [long, lat];
 }
 
@@ -127,7 +130,7 @@ function findNextTriangle(vertex, triangle, allTriangles, alreadyNeighbors) {
 }
 
 function init() {
-    const random_points = generateRandomPoints(1000);
+    const random_points = generateRandomPoints(200);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
     let d_triangles = removeTriangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
 
