@@ -119,7 +119,7 @@ function loadMesh() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
-        fileLoader.load('./mesh files/sphere6.sph', 
+        fileLoader.load('./mesh files/sphere7.sph', 
             function (data) {
                 const lines = data.split('\n');
                 const line1 = lines[1].split(' ');
@@ -200,7 +200,7 @@ async function init() {
     // scene.add(meshInfo);
 
     // Sphere Object
-    const geometrySphere = new THREE.SphereGeometry(0.99, 32, 32);
+    const geometrySphere = new THREE.SphereGeometry(0.98, 32, 32);
     const materialSphere = new THREE.MeshBasicMaterial({ color: 0x008000});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
@@ -219,7 +219,7 @@ async function init() {
 
     for (let i = 0; i < particleCount; i++) {
         const particleLabel = createLabel(`P${i}`, meshData.vertices[i]);
-        //scene.add(particleLabel);
+        scene.add(particleLabel);
 
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
@@ -233,7 +233,7 @@ async function init() {
     particleMaterial.sizeAttenuation = true;
     particleMaterial.wireframe = false;
     const particles = new THREE.Points(particleGeometry, particleMaterial);
-    //scene.add(particles);
+    scene.add(particles);
 
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
@@ -272,7 +272,7 @@ async function init() {
             }
 
             const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.03);
-            //scene.add(line[0]);
+            scene.add(line[0]);
         }
     }
     
@@ -284,11 +284,11 @@ async function init() {
         const pointSphereMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
         const pointSphere = new THREE.Mesh(pointSphereGeom, pointSphereMat);
         pointSphere.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
-        scene.add(pointSphere);
+        //scene.add(pointSphere);
         
         if (i !== resultData.length - 1) {
             const line = createSphericalCurve(resultData[i], resultData[i + 1], 1, 0xbae1ff);
-            scene.add(line[0]);
+            //scene.add(line[0]);
         }
     }
 
