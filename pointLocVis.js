@@ -42,7 +42,7 @@ function createSphericalCurve(pointA, pointB, radius, lineColor, add = 0, segmen
     }
 }
 
-function createSphericalTriangle(points, faceColor = 0xFFFFFF,  edgeVertices = 50) {
+function createSphericalTriangle(points, edgeVertices = 50) {
     let vectorA = new THREE.Vector3(points[0],points[1],points[2]);
     let vectorB = new THREE.Vector3(points[3],points[4],points[5]);
     let vectorC = new THREE.Vector3(points[6],points[7],points[8]);
@@ -90,7 +90,7 @@ function createSphericalTriangle(points, faceColor = 0xFFFFFF,  edgeVertices = 5
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
     geometry.setIndex( indices );
-    const material = new THREE.MeshBasicMaterial( { side: THREE.DoubleSide, color: faceColor });
+    const material = new THREE.MeshBasicMaterial( { side: THREE.DoubleSide, color: 0x4F42B5 });
     return new THREE.Mesh( geometry, material );
 }
 
@@ -116,7 +116,7 @@ function loadMesh() {
     return new Promise((resolve, reject) => {
         let meshData = { vertices: [], faces: [] };
 
-        fileLoader.load('./mesh files/sphere7.sph', 
+        fileLoader.load('./mesh files/sphere1.sph', 
             function (data) {
                 const lines = data.split('\n');
                 const line1 = lines[1].split(' ');
@@ -151,7 +151,7 @@ function loadResult() {
     return new Promise((resolve, reject) => {
         let resultData = [];
 
-        fileLoader.load('vis.txt',
+        fileLoader.load('./result files/sphere7res.txt',
             function (data) {
                 const lines = data.split('\n');
                 for (let i = 0; i < lines.length; i++) {
@@ -182,11 +182,10 @@ async function init() {
 
     // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x808080);
 
     // Sphere Object
-    const geometrySphere = new THREE.SphereGeometry(0.99, 32, 32);
-    const materialSphere = new THREE.MeshBasicMaterial({ color: 0x000000});
+    const geometrySphere = new THREE.SphereGeometry(0.97, 32, 32);
+    const materialSphere = new THREE.MeshBasicMaterial({ color: 0x008000});
     const meshSphere = new THREE.Mesh(geometrySphere, materialSphere);
     scene.add(meshSphere);
 
@@ -205,8 +204,8 @@ async function init() {
     }
 
     for (let i = 0; i < particleCount; i++) {
-        const particleLabel = createLabel(`P${i}`, meshData.vertices[i]);
-        //scene.add(particleLabel);
+        const particleLabel = createLabel(`P${origMeshData.vertices[i]}`, meshData.vertices[i]);
+        scene.add(particleLabel);
 
         particlePositions[i * 3] = meshData.vertices[i][0];
         particlePositions[i * 3 + 1] = meshData.vertices[i][1];
@@ -222,9 +221,6 @@ async function init() {
     const particles = new THREE.Points(particleGeometry, particleMaterial);
     //scene.add(particles);
 
-    // For Visualization
-    const visRoot = await loadResult();
-    console.log(visRoot);
     // Faces
     for (let i = 0; i < meshData.faces.length; i++) {
         let face_indices = [];
@@ -247,9 +243,6 @@ async function init() {
                 }
             }
             let sphericalTriangles = createSphericalTriangle(triangleVertices);
-            if (triangleVertices.includes(visRoot[0][0]) && triangleVertices.includes(visRoot[0][1]) && triangleVertices.includes(visRoot[0][2])) {
-                sphericalTriangles.material.color.set(0x008000); // Highlight root
-            }
             scene.add(sphericalTriangles);
         }
 
@@ -264,12 +257,12 @@ async function init() {
                 connectTo = meshData.vertices[meshData.faces[i][j + 1]];
             }
 
-            const line = createSphericalCurve(currVertex, connectTo, 1, 0x110106, -0.0098);
-            scene.add(line[0]);
+            const line = createSphericalCurve(currVertex, connectTo, 1, 0xFFFF00, 0.01);
+            //scene.add(line[0]);
         }
     }
     
-    //Results
+    // Results
     // const resultData = await loadResult();
     // for (let i = 0; i < resultData.length; i++) {
 
@@ -278,25 +271,12 @@ async function init() {
     //     const pointSphere = new THREE.Mesh(pointSphereGeom, pointSphereMat);
     //     pointSphere.position.set(resultData[i][0], resultData[i][1], resultData[i][2]);
     //     scene.add(pointSphere);
-
-    //     if (i === 0) {
-    //         const label = createLabel(`Root`, resultData[i]);
-    //         scene.add(label);
-    //     }
         
     //     if (i !== resultData.length - 1) {
     //         const line = createSphericalCurve(resultData[i], resultData[i + 1], 1, 0xbae1ff, 0.01);
     //         scene.add(line[0]);
     //     }
     // }
-
-    // For Visualization of Spherical Anya
-    const pointVisGeom = new THREE.SphereGeometry(0.02, 32, 32);
-    const pointVisMat = new THREE.MeshBasicMaterial({ color: 0x916248 });
-    const pointSphere = new THREE.Mesh(pointVisGeom, pointVisMat);
-    pointSphere.position.set(visRoot[0][0], visRoot[0][1], visRoot[0][2]);
-    scene.add(pointSphere);
-    
 
     /* Sizes */
     const sizes = {

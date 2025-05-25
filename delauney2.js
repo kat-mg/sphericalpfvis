@@ -130,9 +130,9 @@ function findNextTriangle(vertex, triangle, allTriangles, alreadyNeighbors) {
 }
 
 function init() {
-    const random_points = generateRandomPoints(200);
+    const random_points = generateRandomPoints(100);
     const delaunay = geoDelaunay(random_points); // calculate delaunay things
-    let d_triangles = removeTriangles(delaunay.triangles.map((x) => x), 0.4); // get calculated triangles
+    let d_triangles = removeTriangles(delaunay.triangles.map((x) => x), 0.3); // get calculated triangles
 
     // d_triangles, reverse the order of the points in each triangle to make it counter-clockwise
     for (let i = 0; i < d_triangles.length; i++) {
